@@ -9,6 +9,8 @@ from langchain_openai import ChatOpenAI
 from langchain_openai  import OpenAIEmbeddings
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
 
@@ -44,3 +46,50 @@ if process_url_clicked:
     vectorstore_openai.save_local("faiss_index")
     main_window.text("Vector Store Saved!")
 
+
+
+query = st.text_input("Ask a question about the articles:")
+BASE_DIR = os.path.dirname(__file__)
+FAISS_INDEX_PATH = os.path.join(BASE_DIR, "faiss_index")
+if query:
+    if not os.path.exists("faiss_index"):
+        st.warning("Please process URLs first.")
+    else:
+        with st.spinner("Retrieving answer..."):
+
+            embeddings = OpenAIEmbeddings()
+
+            vectorstore = FAISS.load_local(
+                FAISS_INDEX_PATH,
+                embeddings,
+                allow_dangerous_deserialization=True
+            )
+
+            retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
+
+            # Prompt
+            prompt = ChatPromptTemplate.from_template(
+                """
+                Answer the question based only on the context below:
+
+                {context}
+
+                Question: {question}
+                """
+            )
+
+            # LCEL chain (LangChain v1 way)
+            chain = (
+                {
+                    "context": retriever,
+                    "question": lambda x: x
+                }
+                | prompt
+                | llm
+                | StrOutputParser()
+            )
+
+            response = chain.invoke(query)
+
+        st.subheader("Answer")
+        st.write(response)

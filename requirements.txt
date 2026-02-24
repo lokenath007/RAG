@@ -1,6 +1,7 @@
 beautifulsoup4==4.14.3
 faiss==1.5.3
 langchain_community==0.4.1
+langchain_core==1.2.15
 langchain_openai==1.1.10
 langchain_text_splitters==1.1.1
 numpy==2.4.2
